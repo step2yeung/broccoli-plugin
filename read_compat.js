@@ -7,6 +7,9 @@ var mapSeries = require('promise-map-series')
 var rimraf = require('rimraf')
 var symlinkOrCopy = require('symlink-or-copy')
 var symlinkOrCopySync = symlinkOrCopy.sync
+const FSTree = require('fs-tree-diff');
+const FSMergeTree = require('fs-tree-diff/lib/fs-merge-tree');
+const RSVP = require('rsvp');
 
 // Mimic how a Broccoli builder would call a plugin, using quickTemp to create
 // directories
@@ -36,7 +39,30 @@ function ReadCompat(plugin) {
     }
   }
 
+  if (plugin.description == null) {
+    plugin.description = this.pluginInterface.name
+    if (this.pluginInterface.annotation != null) {
+      plugin.description += ': ' + this.pluginInterface.annotation
+    }
+  }
+
+  this._hasSetup = false;
+}
+
+ReadCompat.prototype.setupFS = function () {
+  if (this._hasSetup) { return; }
+
+  this.inTree = new FSMergeTree({
+    inputs: this.pluginInterface.inputNodes.map(n => n.out || n.outputPath || path.resolve(n))
+  });
+  this.outTree = new FSTree({
+    root: this.outputPath,
+    srcTree: !this.fsFacade,
+  });
+
   this.pluginInterface.setup(null, {
+    inTree: this.inTree,
+    outTree: this.outTree,
     inputPaths: this.inputPaths,
     outputPath: this.outputPath,
     cachePath: this.cachePath
@@ -44,12 +70,7 @@ function ReadCompat(plugin) {
 
   this.callbackObject = this.pluginInterface.getCallbackObject()
 
-  if (plugin.description == null) {
-    plugin.description = this.pluginInterface.name
-    if (this.pluginInterface.annotation != null) {
-      plugin.description += ': ' + this.pluginInterface.annotation
-    }
-  }
+  this._hasSetup = true;
 }
 
 ReadCompat.prototype.read = function(readTree) {
@@ -62,6 +83,8 @@ ReadCompat.prototype.read = function(readTree) {
 
   return mapSeries(this.pluginInterface.inputNodes, readTree)
     .then(function(outputPaths) {
+      self.setupFS();
+
       var priorBuildInputNodeOutputPaths = self._priorBuildInputNodeOutputPaths;
       // In old .read-based Broccoli, the inputNodes's outputPaths can change
       // on each rebuild. But the new API requires that our plugin sees fixed
@@ -90,7 +113,9 @@ ReadCompat.prototype.read = function(readTree) {
       // save for next builds comparison
       self._priorBuildInputNodeOutputPaths = outputPaths;
 
-      return self.callbackObject.build()
+      self.inTree.reread();
+      self.outTree.start();
+      return RSVP.resolve(self.callbackObject.build()).finally(() => self.outTree.stop());
     })
     .then(function() {
       return self.outputPath

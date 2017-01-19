@@ -29,6 +29,9 @@ function Plugin(inputNodes, options) {
   this._persistentOutput = !!options.persistentOutput
   this._needsCache = (options.needsCache != null) ? !!options.needsCache : true
 
+  this._fsFacade = !!options.fsFacade;
+  this._isOutputMaterialized = false;
+
   this._checkOverrides()
 }
 
@@ -48,7 +51,8 @@ Plugin.prototype._checkOverrides = function() {
 Plugin.prototype.__broccoliFeatures__ = Object.freeze({
   persistentOutputFlag: true,
   sourceDirectories: true,
-  needsCacheFlag: true
+  needsCacheFlag: true,
+  fsFacade: true,
 })
 
 // The Broccoli builder calls plugin.__broccoliGetInfo__
@@ -65,6 +69,7 @@ Plugin.prototype.__broccoliGetInfo__ = function(builderFeatures) {
     name: this._name,
     annotation: this._annotation,
     persistentOutput: this._persistentOutput,
+    fsFacade: this._fsFacade,
     needsCache: this._needsCache
   }
 
@@ -91,6 +96,8 @@ Plugin.prototype._setup = function(builderFeatures, options) {
   this._builderFeatures = builderFeatures
   this.inputPaths = options.inputPaths
   this.outputPath = options.outputPath
+  this.in = options.inTree;
+  this.out = options.outTree;
   if (!this.builderFeatures.needsCacheFlag) {
     this.cachePath = this._needsCache ? options.cachePath : undefined
   } else {
