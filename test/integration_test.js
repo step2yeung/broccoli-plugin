@@ -241,6 +241,20 @@ describe('integration test', function(){
           })
       })
     })
+
+    describe.skip('fsFacade', function() {
+      it('sets up fstrees on first build', function() {
+        expect('this thing is tested').to.equal(true);
+      });
+
+      it('persists fstrees between builds', function() {
+        expect('this thing is tested').to.equal(true);
+      });
+
+      it('rereads trees each build, notifying them of changed roots', function() {
+        expect('this thing is tested').to.equal(true);
+      });
+    });
   })
 
   multidepRequire.forEachVersion('broccoli', function(broccoliVersion, module) {

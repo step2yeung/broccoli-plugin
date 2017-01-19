@@ -141,6 +141,22 @@ describe('unit tests', function() {
         var pluginInterface = node.__broccoliGetInfo__()
         expect(pluginInterface).to.have.property('needsCache', false)
       })
+
+      it('sets fsFacade if provided at instantiation', function() {
+        let node = new NoopPlugin([], {
+          fsFacade: true,
+        });
+
+        let pluginInterface = node.__broccoliGetInfo__();
+        expect(pluginInterface).to.have.property('fsFacade', true);
+      });
+
+      it('defaults fsFacade support to false', function() {
+        let node = new NoopPlugin([], {});
+
+        let pluginInterface = node.__broccoliGetInfo__();
+        expect(pluginInterface).to.have.property('fsFacade', false);
+      });
     })
 
     describe('backwards compatibility', function() {

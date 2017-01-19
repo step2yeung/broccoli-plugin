@@ -49,11 +49,19 @@ function ReadCompat(plugin) {
   this._hasSetup = false;
 }
 
-ReadCompat.prototype.setupFS = function () {
+function inputNode2FSTreeInput(outputPaths, node, index) {
+  if (typeof node === 'string') {
+    return path.resolve(node);
+  }
+
+  return node.out || node.outputPath || outputPaths[index];
+}
+
+ReadCompat.prototype.setupFS = function (outputPaths) {
   if (this._hasSetup) { return; }
 
   this.inTree = new FSMergeTree({
-    inputs: this.pluginInterface.inputNodes.map(n => n.out || n.outputPath || path.resolve(n))
+    inputs: this.pluginInterface.inputNodes.map(inputNode2FSTreeInput.bind(null, outputPaths))
   });
   this.outTree = new FSTree({
     root: this.outputPath,
@@ -83,7 +91,7 @@ ReadCompat.prototype.read = function(readTree) {
 
   return mapSeries(this.pluginInterface.inputNodes, readTree)
     .then(function(outputPaths) {
-      self.setupFS();
+      self.setupFS(outputPaths);
 
       var priorBuildInputNodeOutputPaths = self._priorBuildInputNodeOutputPaths;
       // In old .read-based Broccoli, the inputNodes's outputPaths can change
@@ -113,7 +121,7 @@ ReadCompat.prototype.read = function(readTree) {
       // save for next builds comparison
       self._priorBuildInputNodeOutputPaths = outputPaths;
 
-      self.inTree.reread();
+      self.inTree.map((fsTree, i) => fsTree.reread(outputPaths[i]));
       self.outTree.start();
       return RSVP.resolve(self.callbackObject.build()).finally(() => self.outTree.stop());
     })

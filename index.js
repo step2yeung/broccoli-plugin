@@ -30,7 +30,6 @@ function Plugin(inputNodes, options) {
   this._needsCache = (options.needsCache != null) ? !!options.needsCache : true
 
   this._fsFacade = !!options.fsFacade;
-  this._isOutputMaterialized = false;
 
   this._checkOverrides()
 }
@@ -77,6 +76,10 @@ Plugin.prototype.__broccoliGetInfo__ = function(builderFeatures) {
   // supported by the builder. Add new features at the top.
   if (!this.builderFeatures.needsCacheFlag) {
     delete nodeInfo.needsCache
+  }
+
+  if (!this.builderFeatures.fsFacade) {
+    delete nodeInfo.fsFacade;
   }
 
   return nodeInfo
