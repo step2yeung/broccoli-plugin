@@ -12,6 +12,8 @@ chai.use(chaiAsPromised)
 var multidepRequire = require('multidep')('test/multidep.json')
 var quickTemp = require('quick-temp')
 var symlinkOrCopy = require('symlink-or-copy');
+var FSTree = require('fs-tree-diff');
+var FSMergeTree = require('fs-tree-diff/lib/fs-merge-tree');
 
 function copyFilesWithAnnotation(sourceDirId, sourceDir, destDir) {
   var files = fs.readdirSync(sourceDir)
@@ -242,20 +244,57 @@ describe('integration test', function(){
       })
     })
 
-    describe.skip('fsFacade', function() {
+    describe('fsFacade', function() {
       it('sets up fstrees on first build', function() {
-        expect('this thing is tested').to.equal(true);
+        var node = new AnnotatingPlugin([], {
+          name: 'SomePlugin',
+          annotation: 'some annotation',
+          fsFacade: true,
+        });
+        builder = new Builder_0_16(node);
+
+        return builder.build()
+          .then(function(hash) {
+            var expectedOutTree = new FSTree({
+              root: hash.graph.tree._readCompat.outputPath,
+            });
+            var expectedInTree = new FSMergeTree({
+              inputs: []
+            });
+            expectedOutTree.stop();
+
+            expect(hash.graph.tree._readCompat._hasSetup).to.equal(true);
+            expect(hash.graph.tree.in).to.deep.equal(expectedInTree);
+            expect(hash.graph.tree.out).to.deep.equal(expectedOutTree);
+          });
       });
 
       it('persists fstrees between builds', function() {
-        expect('this thing is tested').to.equal(true);
+        var node = new AnnotatingPlugin([], {
+          name: 'SomePlugin',
+          annotation: 'some annotation',
+          fsFacade: true,
+        });
+        builder = new Builder_0_16(node);
+
+        return RSVP.Promise.resolve()
+          .then(function() {
+            return builder.build();
+          })
+          .then(function(initBuild) {
+            return builder.build()
+            .then(function(reBuild) {
+              expect(initBuild.graph.tree.in).to.deep.equal(reBuild.graph.tree.in);
+              expect(initBuild.graph.tree.out).to.deep.equal(reBuild.graph.tree.out);
+            })
+          });
       });
 
-      it('rereads trees each build, notifying them of changed roots', function() {
+      it.skip('rereads trees each build, notifying them of changed roots', function() {
         expect('this thing is tested').to.equal(true);
       });
     });
-  })
+  });
 
   multidepRequire.forEachVersion('broccoli', function(broccoliVersion, module) {
     var Builder = module.Builder

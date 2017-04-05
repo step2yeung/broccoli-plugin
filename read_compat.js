@@ -61,11 +61,12 @@ ReadCompat.prototype.setupFS = function (outputPaths) {
   if (this._hasSetup) { return; }
 
   this.inTree = new FSMergeTree({
-    inputs: this.pluginInterface.inputNodes.map(inputNode2FSTreeInput.bind(null, outputPaths))
+    inputs: this.pluginInterface.inputNodes.map(inputNode2FSTreeInput.bind(null, outputPaths)),
+    srcTree: !this.pluginInterface.fsFacade,
   });
   this.outTree = new FSTree({
     root: this.outputPath,
-    srcTree: !this.fsFacade,
+    srcTree: !this.pluginInterface.fsFacade,
   });
 
   this.pluginInterface.setup(null, {
